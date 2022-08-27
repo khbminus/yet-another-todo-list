@@ -11,5 +11,10 @@ job("Build and run tests") {
             echo hello World!
             """
         }
+        shellScript {
+            content = """
+            echo another hello World!
+            """
+        }
     }
 }
