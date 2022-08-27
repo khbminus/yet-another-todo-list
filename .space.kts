@@ -8,13 +8,15 @@ job("Build and run tests") {
     container(displayName = "Rust build", image = "rust:latest") {
     	shellScript {
             content = """
-            echo hello World!
+            cargo install termtree
             """
         }
-        shellScript {
-            content = """
-            echo another hello World!
-            """
-        }
+    }
+        container(displayName = "termtree", image = "rust:latest") {
+            shellScript {
+                content = """
+                termtree
+                """
+            }
     }
 }
