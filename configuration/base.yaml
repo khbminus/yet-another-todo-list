@@ -1,0 +1,10 @@
+application:
+  port: 8000
+  host: 0.0.0.0
+database:
+  host: "127.0.0.1"
+  port: 1338
+  username: "postgres"
+  password: "password"
+  database_name: "yatd"
+  require_ssl: false

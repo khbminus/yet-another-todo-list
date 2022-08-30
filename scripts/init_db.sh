@@ -15,7 +15,7 @@ fi
 DB_USER="${POSTGRES_USER:=postgres}"
 DB_PASSWORD="${POSTGRES_PASSWORD:=password}"
 DB_NAME="${POSTGRES_DB:=yatd}"
-DB_PORT="${POSTGRES_PORT:=5432}"
+DB_PORT="${POSTGRES_PORT:=1338}"
 
 if [[ -z "${SKIP_DOCKER}" ]]; then
 CONTAINER_ID=$(docker run \
