@@ -19,6 +19,28 @@ async fn user_new_return_200_on_valid_form() {
     // Asserts
     assert_eq!(response.status().as_u16(), 200);
 }
+#[tokio::test]
+async fn user_new_actually_add_user() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+
+    let form = "name=khb&password=aboba";
+    client
+        .post(format!("{}/user/new", app.address))
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body(form)
+        .send()
+        .await
+        .expect("Failed to send request");
+    
+    let inserted = sqlx::query!("SELECT name, password FROM users")
+        .fetch_one(&app.db_pool)
+        .await
+        .expect("Failed to fetch user");
+    
+    assert_eq!(inserted.name, "khb");
+    assert_eq!(inserted.password, "aboba");
+}
 
 #[tokio::test]
 async fn user_new_returns_400_when_something_is_missing() {
