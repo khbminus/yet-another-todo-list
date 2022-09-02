@@ -1,7 +1,7 @@
 use std::net::TcpListener;
 use actix_web::dev::Server;
 use actix_web::{App, HttpServer, web};
-use crate::routes::{health_check, new_user, get_todo_lists};
+use crate::routes::{health_check, new_user, get_todo_lists, post_new_list};
 use sqlx::PgPool;
 use actix_web::web::Data;
 
@@ -12,13 +12,14 @@ pub fn run(
     base_url: String,
     db_pool: PgPool
 ) -> Result<Server, std::io::Error> {
-    let base_url = ApplicationBaseUrl(base_url);
+    let _base_url = ApplicationBaseUrl(base_url);
     let db_pool = Data::new(db_pool);
     let server = HttpServer::new(move || {
         App::new()
             .route("/health_check", web::get().to(health_check))
             .route("/user/new", web::post().to(new_user))
             .route("/todo", web::get().to(get_todo_lists))
+            .route("/todo", web::post().to(post_new_list))
             .app_data(db_pool.clone())
     })
         .listen(listener)?
