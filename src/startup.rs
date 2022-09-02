@@ -1,7 +1,7 @@
 use std::net::TcpListener;
 use actix_web::dev::Server;
 use actix_web::{App, HttpServer, web};
-use crate::routes::{health_check, new_user};
+use crate::routes::{health_check, new_user, get_todo_lists};
 use sqlx::PgPool;
 use actix_web::web::Data;
 
@@ -18,6 +18,7 @@ pub fn run(
         App::new()
             .route("/health_check", web::get().to(health_check))
             .route("/user/new", web::post().to(new_user))
+            .route("/todo", web::get().to(get_todo_lists))
             .app_data(db_pool.clone())
     })
         .listen(listener)?
