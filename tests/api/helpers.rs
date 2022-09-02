@@ -1,4 +1,5 @@
 use std::net::TcpListener;
+use reqwest::Response;
 use yet_another_todo_list::startup::run;
 use yet_another_todo_list::configuration::{DatabaseSettings, get_configuration};
 use sqlx::{Executor, PgPool, PgConnection, Connection};
@@ -9,8 +10,35 @@ pub struct TestApp {
     pub db_pool: PgPool,
 }
 
-pub async fn spawn_app() -> TestApp {
+impl TestApp {
+    pub async fn add_user(&self, body: String) -> Response {
+        reqwest::Client::new()
+            .post(format!("{}/user/new", self.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to send request")
+    }
+    pub async fn get_todo_lists(&self) -> Response {
+        reqwest::Client::new()
+            .get(format!("{}/todo", self.address))
+            .send()
+            .await
+            .expect("Failed to send request")
+    }
+    pub async fn add_todo_list(&self, body: String) -> Response {
+        reqwest::Client::new()
+            .post(format!("{}/todo", self.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to send request")
+    }
+}
 
+pub async fn spawn_app() -> TestApp {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port");
     let port = listener.local_addr().unwrap().port();
     let address = format!("http://127.0.0.1:{}", port);
@@ -19,13 +47,13 @@ pub async fn spawn_app() -> TestApp {
     configuration.database.database_name = Uuid::new_v4().to_string();
     let connection_pool = configure_database(&configuration.database)
         .await;
-    
+
     let server =
         run(listener, "localhost".into(), connection_pool.clone()).expect("Failed to bind address");
     let _ = tokio::spawn(server);
     TestApp {
         address,
-        db_pool: connection_pool
+        db_pool: connection_pool,
     }
 }
 
