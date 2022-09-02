@@ -9,7 +9,6 @@ pub async fn get_todo_lists(db_pool: web::Data<PgPool>) -> HttpResponse {
     let lists = match get_lists_from_db(&db_pool).await {
         Ok(lists) => lists,
         Err(e) => {
-            dbg!(e);
             return HttpResponse::InternalServerError().finish();
         }
     };
