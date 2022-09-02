@@ -1,12 +1,12 @@
 use crate::helpers::spawn_app;
-use yet_another_todo_list::domain::ToDoList;
+use yet_another_todo_list::domain::ToDoListEntry;
 
 #[tokio::test]
 async fn get_todo_returns_200() {
     // Arrange
     let app = spawn_app().await;
     // Act
-    let response = app.get_todo_lists().await;
+    let response = app.get_todo_lists_response().await;
     // Asserts
     assert_eq!(response.status().as_u16(), 200);
 }
@@ -17,9 +17,9 @@ async fn get_todo_returns_empty_list() {
     let app = spawn_app().await;
 
     // Act
-    let response = app.get_todo_lists().await;
+    let response = app.get_todo_lists_response().await;
     let text = response.text().await.expect("Failed to get text");
-    let lists: Vec<ToDoList> = serde_json::from_str(&text).expect("Failed to make json");
+    let lists: Vec<ToDoListEntry> = serde_json::from_str(&text).expect("Failed to make json");
 
     // Asserts
     assert_eq!(lists.len(), 0);
@@ -45,7 +45,7 @@ async fn post_todo_actually_adds_to_db() {
     let body = "name=Aboba";
 
     // Act
-    let response = app.add_todo_list(body.to_owned()).await;
+    app.add_todo_list(body.to_owned()).await;
     
     // Asserts
     let saved = sqlx::query!("SELECT name from lists")
@@ -63,8 +63,8 @@ async fn get_contain_list_after_post() {
     
     app.add_todo_list(body.to_owned()).await;
     
-    let response = app.get_todo_lists().await;
-    let lists: Vec<ToDoList> = response.json().await.expect("Failed to json");
+    let response = app.get_todo_lists_response().await;
+    let lists: Vec<ToDoListEntry> = response.json().await.expect("Failed to json");
     
     assert_eq!(lists.len(), 1);
     assert_eq!(lists[0].name, "Aboba");

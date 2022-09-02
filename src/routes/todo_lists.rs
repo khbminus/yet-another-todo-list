@@ -1,6 +1,6 @@
 use actix_web::{HttpResponse, web};
 use sqlx::PgPool;
-use crate::domain::ToDoList;
+use crate::domain::ToDoListEntry;
 use uuid::Uuid;
 use chrono::Utc;
 use serde::Deserialize;
@@ -8,15 +8,13 @@ use serde::Deserialize;
 pub async fn get_todo_lists(db_pool: web::Data<PgPool>) -> HttpResponse {
     let lists = match get_lists_from_db(&db_pool).await {
         Ok(lists) => lists,
-        Err(e) => {
-            return HttpResponse::InternalServerError().finish();
-        }
+        Err(_) => return HttpResponse::InternalServerError().finish()
     };
     HttpResponse::Ok().json(lists)
 }
 
-pub async fn get_lists_from_db(db_pool: &PgPool) -> Result<Vec<ToDoList>, sqlx::Error> {
-    sqlx::query_as!(ToDoList,
+pub async fn get_lists_from_db(db_pool: &PgPool) -> Result<Vec<ToDoListEntry>, sqlx::Error> {
+    sqlx::query_as!(ToDoListEntry,
         r#"
     SELECT id, name FROM lists
     "#)

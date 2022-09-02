@@ -4,6 +4,7 @@ use yet_another_todo_list::startup::run;
 use yet_another_todo_list::configuration::{DatabaseSettings, get_configuration};
 use sqlx::{Executor, PgPool, PgConnection, Connection};
 use uuid::Uuid;
+use yet_another_todo_list::domain::ToDoListEntry;
 
 pub struct TestApp {
     pub address: String,
@@ -20,18 +21,32 @@ impl TestApp {
             .await
             .expect("Failed to send request")
     }
-    pub async fn get_todo_lists(&self) -> Response {
+    pub async fn get_todo_lists_response(&self) -> Response {
         reqwest::Client::new()
             .get(format!("{}/todo", self.address))
             .send()
             .await
             .expect("Failed to send request")
     }
+    pub async fn get_todo_lists(&self) -> Vec<ToDoListEntry> {
+        let response = self.get_todo_lists_response().await;
+        response.json().await.expect("Failed to get lists")
+    }
     pub async fn add_todo_list(&self, body: String) -> Response {
         reqwest::Client::new()
             .post(format!("{}/todo", self.address))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(body)
+            .send()
+            .await
+            .expect("Failed to send request")
+    }
+    pub async fn add_todo_list_by_name(&self, name: String) -> Response {
+        self.add_todo_list(format!("name={}", name)).await
+    }
+    pub async fn get_list(&self, id: Uuid) -> Response {
+        reqwest::Client::new()
+            .get(format!("{}/todo/{}", self.address, id.to_string()))
             .send()
             .await
             .expect("Failed to send request")
