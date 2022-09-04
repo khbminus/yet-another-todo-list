@@ -1,6 +1,6 @@
 use actix_web::{HttpResponse, web};
-use sqlx::PgPool;
-use crate::domain::ToDoListEntry;
+use sqlx::{PgPool};
+use crate::domain::{ToDoList, ToDoListEntry, TaskEntry};
 use uuid::Uuid;
 use chrono::Utc;
 use serde::Deserialize;
@@ -47,3 +47,35 @@ async fn insert_list(name: &String, db_pool: &PgPool) -> Result<(), sqlx::Error>
         .await?;
     Ok(())
 }
+
+pub async fn get_exact_list(id: web::Path<Uuid>, db_pool: web::Data<PgPool>) -> HttpResponse {
+    let id = id.into_inner();
+    match select_list(&id, &db_pool).await {
+        Ok(list) => HttpResponse::Ok().json(list),
+        Err(error) => match error {
+            sqlx::Error::RowNotFound => HttpResponse::BadRequest().finish(),
+            _ => HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+async fn select_list(id: &Uuid, db_pool: &PgPool) -> Result<ToDoList, sqlx::Error> {
+    let mut transaction = db_pool.begin().await?;
+    let name = sqlx::query!("SELECT name FROM lists WHERE id = $1", id)
+        .fetch_one(&mut transaction)
+        .await?.name;
+    let tasks = sqlx::query_as!(TaskEntry, r#"
+    SELECT id, content, done 
+    FROM tasks 
+    WHERE list_id = $1 
+    ORDER BY id
+    "#, id)
+        .fetch_all(&mut transaction)
+        .await?;
+    transaction.commit().await?;
+    Ok(ToDoList {
+        name,
+        tasks
+    })
+}
+
