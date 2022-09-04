@@ -52,10 +52,9 @@ pub async fn get_exact_list(id: web::Path<Uuid>, db_pool: web::Data<PgPool>) -> 
     let id = id.into_inner();
     match select_list(&id, &db_pool).await {
         Ok(list) => HttpResponse::Ok().json(list),
-        Err(error) => match error {
-            sqlx::Error::RowNotFound => HttpResponse::BadRequest().finish(),
-            _ => HttpResponse::InternalServerError().finish()
-        }
+        Err(error) => 
+            if let sqlx::Error::RowNotFound = error { HttpResponse::BadRequest().finish() } 
+            else { HttpResponse::InternalServerError().finish() }
     }
 }
 
@@ -75,7 +74,7 @@ async fn select_list(id: &Uuid, db_pool: &PgPool) -> Result<ToDoList, sqlx::Erro
     transaction.commit().await?;
     Ok(ToDoList {
         name,
-        tasks
+        tasks,
     })
 }
 
