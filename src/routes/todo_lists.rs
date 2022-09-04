@@ -17,6 +17,7 @@ pub async fn get_lists_from_db(db_pool: &PgPool) -> Result<Vec<ToDoListEntry>, s
     sqlx::query_as!(ToDoListEntry,
         r#"
     SELECT id, name FROM lists
+    ORDER BY added_at
     "#)
         .fetch_all(db_pool)
         .await
