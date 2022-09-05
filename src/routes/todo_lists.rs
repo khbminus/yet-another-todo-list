@@ -53,9 +53,8 @@ pub async fn get_exact_list(id: web::Path<Uuid>, db_pool: web::Data<PgPool>) -> 
     let id = id.into_inner();
     match select_list(&id, &db_pool).await {
         Ok(list) => HttpResponse::Ok().json(list),
-        Err(error) => 
-            if let sqlx::Error::RowNotFound = error { HttpResponse::BadRequest().finish() } 
-            else { HttpResponse::InternalServerError().finish() }
+        Err(error) =>
+            if let sqlx::Error::RowNotFound = error { HttpResponse::BadRequest().finish() } else { HttpResponse::InternalServerError().finish() }
     }
 }
 
@@ -78,4 +77,40 @@ async fn select_list(id: &Uuid, db_pool: &PgPool) -> Result<ToDoList, sqlx::Erro
         tasks,
     })
 }
+
+#[derive(Deserialize)]
+pub struct NewTaskData {
+    content: String,
+}
+
+pub async fn add_new_task(
+    path: web::Path<Uuid>,
+    new_task: web::Form<NewTaskData>,
+    db_pool: web::Data<PgPool>,
+) -> HttpResponse {
+    let id = path.into_inner();
+    if let Ok(_) = insert_new_task(&id, &new_task, &db_pool).await {
+        HttpResponse::Ok().finish()
+    } else {
+        HttpResponse::InternalServerError().finish()
+    }
+}
+
+async fn insert_new_task(
+    id: &Uuid,
+    new_task: &NewTaskData,
+    db_pool: &PgPool,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(r#"
+    INSERT INTO tasks(id, list_id, content, done)
+    VALUES (DEFAULT, $1, $2, $3)
+    "#,
+        id,
+        new_task.content,
+        false)
+        .execute(db_pool)
+        .await?;
+
+    Ok(())
+} 
 

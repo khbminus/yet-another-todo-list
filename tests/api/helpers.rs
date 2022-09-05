@@ -51,6 +51,16 @@ impl TestApp {
             .await
             .expect("Failed to send request")
     }
+    
+    pub async fn add_item(&self, id: Uuid, body: String) -> Response {
+        reqwest::Client::new()
+            .post(format!("{}/todo/{}", self.address, id.to_string()))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to send request")
+    }
 }
 
 pub async fn spawn_app() -> TestApp {
