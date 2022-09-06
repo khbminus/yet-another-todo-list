@@ -55,17 +55,6 @@ async fn add_new_item_returns_200() {
 }
 
 #[tokio::test]
-async fn add_new_item_returns_400_on_empty_form() {
-    let app = spawn_app().await;
-    let body = "content=";
-    let list_id = prepare_list(&app).await;
-
-    let response = app.add_item(list_id, body.into()).await;
-    
-    assert_eq!(response.status().as_u16(), 400);
-}
-
-#[tokio::test]
 async fn add_new_item_actually_adds() {
     let app = spawn_app().await;
     let body = "content=Hallo";
@@ -120,14 +109,66 @@ async fn add_new_item_adds_to_correct_list() {
     app.add_todo_list_by_name("name2".into()).await;
     let lists = app.get_todo_lists().await;
     let list_id2 = lists[1].id;
-    
+
     app.add_item(list_id1, "content=List1".into()).await;
     app.add_item(list_id2, "content=List2".into()).await;
-    
+
     let list1: ToDoList = app.get_list(list_id1).await.json().await.expect("Failed to get list");
     let list2: ToDoList = app.get_list(list_id2).await.json().await.expect("Failed to get list");
-    
+
     assert_eq!(list1.tasks.len(), 1);
     assert_eq!(list1.tasks[0].content, "List1");
     assert_eq!(list2.tasks[0].content, "List2");
+}
+
+#[tokio::test]
+async fn check_complete_returns_200_on_post() {
+    let app = spawn_app().await;
+    let list_id = prepare_list(&app).await;
+    let item_body = "content=Task".to_string();
+    app.add_item(list_id, item_body).await;
+    let list: ToDoList = app.get_list(list_id).await.json().await.expect("Failed to get list");
+    
+    let response = app.make_complete(list_id, list.tasks[0].id)
+        .await;
+    
+    assert_eq!(response.status().as_u16(), 200);
+}
+
+#[tokio::test]
+async fn check_complete_make_it_complete_on_post() {
+    let app = spawn_app().await;
+    let list_id = prepare_list(&app).await;
+    let item_body = "content=Task".to_string();
+    app.add_item(list_id, item_body).await;
+    let list: ToDoList = app.get_list(list_id).await.json().await.expect("Failed to get list");
+
+    let _ = app.make_complete(list_id, list.tasks[0].id)
+        .await;
+    
+    let completness = sqlx::query!("SELECT done from tasks")
+        .fetch_one(&app.db_pool)
+        .await
+        .expect("Failed to query");
+    
+    assert!(completness.done);
+}
+
+#[tokio::test]
+async fn check_complete_make_it_complete_only_one_task_on_post() {
+    let app = spawn_app().await;
+    let list_id = prepare_list(&app).await;
+    let item_body1 = "content=Task1".to_string();
+    let item_body2 = "content=Task2".to_string();
+    app.add_item(list_id, item_body1).await;
+    app.add_item(list_id, item_body2).await;
+    let mut list: ToDoList = app.get_list(list_id).await.json().await.expect("Failed to get list");
+
+    let _ = app.make_complete(list_id, list.tasks[0].id)
+        .await;
+    
+    list = app.get_list(list_id).await.json().await.expect("Failed to get list");
+
+    assert!(list.tasks[0].done);
+    assert!(!list.tasks[1].done);
 }

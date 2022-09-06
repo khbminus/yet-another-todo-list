@@ -61,6 +61,14 @@ impl TestApp {
             .await
             .expect("Failed to send request")
     }
+    
+    pub async fn make_complete(&self, list_id: Uuid, task_id: i32) -> Response {
+        reqwest::Client::new()
+            .post(format!("{}/todo/{}/{}/complete", self.address, list_id, task_id))
+            .send()
+            .await
+            .expect("Failed to send requests")
+    }
 }
 
 pub async fn spawn_app() -> TestApp {

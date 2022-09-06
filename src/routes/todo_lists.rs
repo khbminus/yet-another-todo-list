@@ -116,5 +116,36 @@ async fn insert_new_task(
         .await?;
 
     Ok(())
-} 
+}
+
+#[derive(Deserialize)]
+pub struct MakeDoneData {
+    pub list_id: Uuid,
+    pub task_id: i32,
+}
+
+pub async fn make_task_done(path: web::Path<MakeDoneData>, db_pool: web::Data<PgPool>) -> HttpResponse {
+    let path = path.into_inner();
+    match flip_doneness(&path.list_id, path.task_id, &db_pool).await {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(e) => {
+            match e {
+                sqlx::Error::RowNotFound => HttpResponse::BadRequest().finish(),
+                _ => HttpResponse::InternalServerError().finish()
+            }
+        }
+    }
+}
+
+async fn flip_doneness(list_id: &Uuid, task_id: i32, db_pool: &PgPool) -> Result<(), sqlx::Error> {
+    sqlx::query!(r#"
+        UPDATE tasks
+        SET done = NOT done
+        WHERE list_id = $1 AND id = $2
+    "#, list_id, task_id)
+        .execute(db_pool)
+        .await?;
+    Ok(())
+}
+
 
