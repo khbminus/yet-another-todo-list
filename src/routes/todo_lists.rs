@@ -1,6 +1,6 @@
 use actix_web::{HttpResponse, web};
 use sqlx::{PgPool};
-use crate::domain::{ToDoList, ToDoListEntry, TaskEntry};
+use crate::domain::{ToDoList, ToDoListEntry, TaskEntry, ToDoListName};
 use uuid::Uuid;
 use chrono::Utc;
 use serde::Deserialize;
@@ -29,19 +29,23 @@ pub struct NewListData {
 }
 
 pub async fn post_new_list(form: web::Form<NewListData>, db_pool: web::Data<PgPool>) -> HttpResponse {
-    match insert_list(&form.name, &db_pool).await {
+    let name = match ToDoListName::parse(form.0.name) {
+        Ok(res) => res,
+        Err(_) => { return HttpResponse::BadRequest().finish(); }
+    };
+    match insert_list(name, &db_pool).await {
         Err(_) => HttpResponse::InternalServerError().finish(),
         Ok(_) => HttpResponse::Ok().finish()
     }
 }
 
-async fn insert_list(name: &String, db_pool: &PgPool) -> Result<(), sqlx::Error> {
+async fn insert_list(name: ToDoListName, db_pool: &PgPool) -> Result<(), sqlx::Error> {
     sqlx::query!(r#"
         INSERT INTO lists (id, name, added_at)
         VALUES ($1, $2, $3)
     "#,
         Uuid::new_v4(),
-        name,
+        name.as_ref(),
         Utc::now()
     )
         .execute(db_pool)
@@ -89,7 +93,7 @@ pub async fn add_new_task(
     db_pool: web::Data<PgPool>,
 ) -> HttpResponse {
     let id = path.into_inner();
-    if let Ok(_) = insert_new_task(&id, &new_task, &db_pool).await {
+    if insert_new_task(&id, &new_task, &db_pool).await.is_ok() {
         HttpResponse::Ok().finish()
     } else {
         HttpResponse::InternalServerError().finish()
